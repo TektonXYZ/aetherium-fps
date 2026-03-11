@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AETHERIUM: The Hollow War</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            overflow: hidden; 
+            background: #000; 
+            font-family: 'Courier New', monospace;
+            color: #0ff;
+        }
+        #gameCanvas { display: block; }
+        
+        /* HUD Styles */
+        #hud {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        
+        #crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px; height: 20px;
+            border: 2px solid #0ff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #0ff;
+        }
+        
+        #crosshair::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 4px; height: 4px;
+            background: #0ff;
+            border-radius: 50%;
+        }
+        
+        .health-bar {
+            position: absolute;
+            bottom: 30px; left: 30px;
+            width: 300px; height: 30px;
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #0ff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0ff, #00ff88);
+            transition: width 0.3s;
+            box-shadow: 0 0 10px #0ff;
+        }
+        
+        .health-text {
+            position: absolute;
+            top: 50%; left: 10px;
+            transform: translateY(-50%);
+            font-weight: bold;
+            text-shadow: 0 0 5px #000;
+        }
+        
+        .ammo-counter {
+            position: absolute;
+            bottom: 30px; right: 30px;
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 0 0 20px #0ff;
+        }
+        
+        .ammo-reserve {
+            font-size: 24px;
+            color: #888;
+        }
+        
+        #weapon-display {
+            position: absolute;
+            bottom: 80px; right: 30px;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        #score-display {
+            position: absolute;
+            top: 30px; right: 30px;
+            text-align: right;
+        }
+        
+        .score-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff0;
+            text-shadow: 0 0 20px #ff0;
+        }
+        
+        .wave-display {
+            font-size: 18px;
+            color: #f0f;
+        }
+        
+        #minimap {
+            position: absolute;
+            top: 30px; left: 30px;
+            width: 200px; height: 200px;
+            background: rgba(0, 20, 40, 0.7);
+            border: 2px solid #0ff;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        
+        #minimap canvas {
+            width: 100%; height: 100%;
+        }
+        
+        /* Menu Screens */
+        .menu-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #000 0%, #001020 50%, #000 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .menu-screen.hidden { display: none; }
+        
+        .game-title {
+            font-size: 72px;
+            font-weight: bold;
+            background: linear-gradient(90deg, #0ff, #f0f, #0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 60px rgba(0, 255, 255, 0.5);
+            margin-bottom: 10px;
+            letter-spacing: 10px;
+        }
+        
+        .game-subtitle {
+            font-size: 18px;
+            color: #888;
+            margin-bottom: 40px;
+            letter-spacing: 5px;
+        }
+        
+        .lore-box {
+            max-width: 800px;
+            padding: 30px;
+            background: rgba(0, 20, 40, 0.8);
+            border: 1px solid #0ff;
+            margin-bottom: 40px;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+        
+        .lore-box h3 {
+            color: #f0f;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .menu-btn {
+            padding: 15px 50px;
+            margin: 10px;
+            background: transparent;
+            border: 2px solid #0ff;
+            color: #0ff;
+            font-size: 20px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+        
+        .menu-btn:hover {
+            background: #0ff;
+            color: #000;
+            box-shadow: 0 0 30px #0ff;
+        }
+        
+        .controls-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 40px;
+            margin-top: 30px;
+            font-size: 14px;
+            color: #888;
+        }
+        
+        .control-item {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .key {
+            color: #0ff;
+            font-weight: bold;
+        }
+        
+        #damage-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 30%, rgba(255, 0, 0, 0.3) 100%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 50;
+        }
+        
+        #damage-overlay.active {
+            opacity: 1;
+        }
+        
+        .notification {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 0 0 30px currentColor;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        
+        .notification.show {
+            opacity: 1;
+        }
+        
+        .notification.kill { color: #0ff; }
+        .notification.wave { color: #f0f; }
+        .notification.warning { color: #ff0; }
+    </style>
+</head>
+<body>
+    <!-- Main Menu -->
+    <div id="mainMenu" class="menu-screen">
+        <h1 class="game-title">AETHERIUM</h1>
+        <p class="game-subtitle">THE HOLLOW WAR</p>
+        
+        <div class="lore-box">
+            <h3>/// CLASSIFIED: OPERATION AETHERIUM ///</h3>
+            <p><strong>Date:</strong> 2187. Location: Aetherium Station, orbiting Proxima Centauri b.</p>
+            <br>
+            <p>The station was humanity's greatest achievement — a self-sustaining megastructure housing 2 million souls, powered by experimental quantum reactors. Then the <strong>Hollow</strong> came.</p>
+            <br>
+            <p>They are not aliens. Not machines. They are <em>absence</em> given form — entities that phase through solid matter, drain life force on contact, and reproduce by converting biomass into more Hollow. The station's AI core malfunctioned. Life support is failing. 98% of the population is either dead or converted.</p>
+            <br>
+            <p>You are <strong>Subject-7</strong>, a cybernetically enhanced operative from the Aegis Program. Your neural implants allow you to perceive the Hollow's phase-shifted forms. Your mission: Reach the Central Reactor, initiate the Purge Protocol, and destroy the station — taking every last Hollow with it.</p>
+            <br>
+            <p>The elevator to the reactor is 12 floors down. Each level is worse than the last. Good luck, operative.</p>
+        </div>
+        
+        <button class="menu-btn" onclick="startGame()">Initialize Mission</button>
+        <button class="menu-btn" onclick="toggleControls()">Controls</button>
+        
+        <div id="controlsPanel" style="display: none; margin-top: 20px;">
+            <div class="controls-list">
+                <div class="control-item"><span>Move</span> <span class="key">W A S D</span></div>
+                <div class="control-item"><span>Look</span> <span class="key">MOUSE</span></div>
+                <div class="control-item"><span>Shoot</span> <span class="key">L-CLICK</span></div>
+                <div class="control-item"><span>ADS</span> <span class="key">R-CLICK</span></div>
+                <div class="control-item"><span>Reload</span> <span class="key">R</span></div>
+                <div class="control-item"><span>Weapon 1</span> <span class="key">1</span></div>
+                <div class="control-item"><span>Weapon 2</span> <span class="key">2</span></div>
+                <div class="control-item"><span>Weapon 3</span> <span class="key">3</span></div>
+                <div class="control-item"><span>Sprint</span> <span class="key">SHIFT</span></div>
+                <div class="control-item"><span>Jump</span> <span class="key">SPACE</span></div>
+                <div class="control-item"><span>Pause</span> <span class="key">ESC</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="menu-screen hidden">
+        <h1 class="game-title" style="font-size: 48px; color: #f00;">MISSION FAILED</h1>
+        <p class="game-subtitle">SUBJECT-7 TERMINATED</p>
+        <div class="lore-box" style="text-align: center;">
+            <p>The Hollow have claimed another operative.</p>
+            <p style="margin-top: 20px; font-size: 24px;">Final Score: <span id="finalScore" style="color: #ff0;">0</span></p>
+            <p style="margin-top: 10px;">Waves Survived: <span id="finalWave" style="color: #f0f;">0</span></p>
+        </div>
+        <button class="menu-btn" onclick="restartGame()">Re-Initialize</button>
+        <button class="menu-btn" onclick="returnToMenu()">Main Menu</button>
+    </div>
+    
+    <!-- Pause Menu -->
+    <div id="pauseMenu" class="menu-screen hidden">
+        <h1 class="game-title" style="font-size: 48px;">PAUSED</h1>
+        <button class="menu-btn" onclick="resumeGame()">Resume</button>
+        <button class="menu-btn" onclick="returnToMenu()">Abort Mission</button>
+    </div>
+    
+    <!-- HUD -->
+    <div id="hud" style="display: none;">
+        <div id="crosshair"></div>
+        
+        <div id="minimap">
+            <canvas id="minimapCanvas" width="200" height="200"></canvas>
+        </div>
+        
+        <div class="health-bar">
+            <div class="health-fill" id="healthFill" style="width: 100%;"></div>
+            <div class="health-text">INTEGRITY: <span id="healthText">100</span>%</div>
+        </div>
+        
+        <div class="ammo-counter">
+            <span id="currentAmmo">30</span><span class="ammo-reserve"> / <span id="reserveAmmo">120</span></span>
+        </div>
+        
+        <div id="weapon-display">
+            <span id="weaponName">AEGIS-7 RIFLE</span>
+        </div>
+        
+        <div id="score-display">
+            <div class="score-value" id="scoreValue">0</div>
+            <div class="wave-display">WAVE <span id="waveNumber">1</span></div>
+        </div>
+        
+        <div id="notification" class="notification"></div>
+    </div>
+    
+    <div id="damage-overlay"></div>
+    <canvas id="gameCanvas"></canvas>
+
+<!-- Three.js for 3D rendering -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- Cannon.js for physics -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+
+<script>
+// ============================================
+// AETHERIUM: THE HOLLOW WAR
+// Phase 2: Core Game Engine
+// ============================================
+
+// Game State
+const GameState = {
+    MENU: 0,
+    PLAYING: 1,
+    PAUSED: 2,
+    GAMEOVER: 3
+};
+
+let currentState = GameState.MENU;
+let gameInstance = null;
+
+// ============================================
+// MATH UTILITIES
+// ============================================
+const MathUtils = {
+    clamp: (value, min, max) => Math.max(min, Math.min(max, value)),
+    lerp: (a, b, t) => a + (b - a) * t,
+    degToRad: (deg) => deg * Math.PI / 180,
+    radToDeg: (rad) => rad * 180 / Math.PI,
+    randomRange: (min, max) => Math.random() * (max - min) + min,
+    distance: (a, b) => Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2),
+    
+    // Vector operations
+    vector3: {
+        add: (a, b) => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z }),
+        sub: (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }),
+        multiply: (v, s) => ({ x: v.x * s, y: v.y * s, z: v.z * s }),
+        normalize: (v) => {
+            const len = Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2);
+            return len > 0 ? { x: v.x / len, y: v.y / len, z: v.z / len } : { x: 0, y: 0, z: 0 };
+        }
+    }
+};
+
+// ============================================
+// INPUT MANAGER
+// ============================================
+class InputManager {
+    constructor() {
+        this.keys = {};
+        this.mouse = { x: 0, y: 0, dx: 0, dy: 0 };
+        this.mouseDown = { left: false, right: false };
+        this.pointerLocked = false;
+        
+        this.setupEventListeners();
+    }
+    
+    setupEventListeners() {
+        // Keyboard
+        document.addEventListener('keydown', (e) => {
+            this.keys[e.code] = true;
+            if (e.code === 'Escape' && currentState === GameState.PLAYING) {
+                togglePause();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            this.keys[e.code] = false;
+        });
+        
+        // Mouse movement
+        document.addEventListener('mousemove', (e) => {
+            if (this.pointerLocked) {
+                this.mouse.dx += e.movementX;
+                this.mouse.dy += e.movementY;
+            }
+        });
+        
+        // Mouse buttons
+        document.addEventListener('mousedown', (e) => {
+            if (e.button === 0) this.mouseDown.left = true;
+            if (e.button === 2) this.mouseDown.right = true;
+        });
+        
+        document.addEventListener('mouseup', (e) => {
+            if (e.button === 0) this.mouseDown.left = false;
+            if (e.button === 2) this.mouseDown.right = false;
+        });
+        
+        // Pointer lock
+        document.addEventListener('pointerlockchange', () => {
+            this.pointerLocked = document.pointerLockElement === document.getElementById('gameCanvas');
+        });
+    }
+    
+    isPressed(code) {
+        return !!this.keys[code];
+    }
+    
+    getMouseDelta() {
+        const delta = { x: this.mouse.dx, y: this.mouse.dy };
+        this.mouse.dx = 0;
+        this.mouse.dy = 0;
+        return delta;
+    }
+    
+    lockPointer() {
+        const canvas = document.getElementById('gameCanvas');
+        canvas.requestPointerLock();
+    }
+    
+    unlockPointer() {
+        document.exitPointerLock();
+    }
+}
+
+// ============================================
+// WEAPON SYSTEM
+// ============================================
+class Weapon {
+    constructor(name, damage, fireRate, reloadTime, magazineSize, totalAmmo, automatic) {
+        this.name = name;
+        this.damage = damage;
+        this.fireRate = fireRate; // shots per second
+        this.reloadTime = reloadTime; // seconds
+        this.magazineSize = magazineSize;
+        this.totalAmmo = totalAmmo;
+        this.automatic = automatic;
+        
+        this.currentAmmo = magazineSize;
+        this.reserveAmmo = totalAmmo;
+        this.lastFireTime = 0;
+        this.isReloading = false;
+        this.reloadStartTime = 0;
+    }
+    
+    canFire() {
+        if (this.isReloading) return false;
+        if (this.currentAmmo <= 0) return false;
+        const now = performance.now();
+        return now - this.lastFireTime >= (1000 / this.fireRate);
+    }
+    
+    fire() {
+        if (!this.canFire()) return false;
+        this.currentAmmo--;
+        this.lastFireTime = performance.now();
+        return true;
+    }
+    
+    startReload() {
+        if (this.isReloading || this.currentAmmo === this.magazineSize || this.reserveAmmo === 0) return false;
+        this.isReloading = true;
+        this.reloadStartTime = performance.now();
+        return true;
+    }
+    
+    update() {
+        if (this.isReloading) {
+            const elapsed = (performance.now() - this.reloadStartTime) / 1000;
+            if (elapsed >= this.reloadTime) {
+                const needed = this.magazineSize - this.currentAmmo;
+                const available = Math.min(needed, this.reserveAmmo);
+                this.currentAmmo += available;
+                this.reserveAmmo -= available;
+                this.isReloading = false;
+            }
+        }
+    }
+}
+
+// ============================================
+// ENEMY AI - THE HOLLOW
+// ============================================
+class Hollow {
+    constructor(position, type = 'drone') {
+        this.position = position.clone();
+        this.velocity = new THREE.Vector3();
+        this.type = type;
+        
+        // Stats based on type
+        const stats = this.getStats(type);
+        this.health = stats.health;
+        this.maxHealth = stats.health;
+        this.speed = stats.speed;
+        this.damage = stats.damage;
+        this.attackRange = stats.attackRange;
+        this.attackCooldown = stats.attackCooldown;
+        this.scoreValue = stats.scoreValue;
+        
+        this.lastAttackTime = 0;
+        this.state = 'chase'; // chase, attack, wander
+        this.targetPosition = null;
+        this.wanderTimer = 0;
+        
+        // Visual
+        this.mesh = null;
+        this.createMesh();
+    }
+    
+    getStats(type) {
+        const stats = {
+            drone: { health: 50, speed: 4, damage: 10, attackRange: 2, attackCooldown: 1, scoreValue: 100 },
+            stalker: { health: 80, speed: 6, damage: 15, attackRange: 2.5, attackCooldown: 0.8, scoreValue: 200 },
+            tank: { health: 200, speed: 2, damage: 25, attackRange: 3, attackCooldown: 1.5, scoreValue: 500 },
+            phantom: { health: 40, speed: 8, damage: 20, attackRange: 1.5, attackCooldown: 0.5, scoreValue: 300 }
+        };
+        return stats[type] || stats.drone;
+    }
+    
+    createMesh() {
+        const geometry = new THREE.CapsuleGeometry(0.5, 1.5, 4, 8);
+        
+        // Different colors for different types
+        const colors = {
+            drone: 0x00ffff,
+            stalker: 0xff00ff,
+            tank: 0xff4400,
+            phantom: 0x8800ff
+        };
+        
+        const material = new THREE.MeshBasicMaterial({
+            color: colors[this.type] || 0x00ffff,
+            wireframe: true
+        });
+        
+        this.mesh = new THREE.Mesh(geometry, material);
+        this.mesh.position.copy(this.position);
+        
+        // Glow effect
+        const glowGeometry = new THREE.SphereGeometry(0.8, 16, 16);
+        const glowMaterial = new THREE.MeshBasicMaterial({
+            color: colors[this.type] || 0x00ffff,
+            transparent: true,
+            opacity: 0.3
+        });
+        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        glow.position.y = 0.5;
+        this.mesh.add(glow);
+    }
+    
+    update(delta, playerPosition, player) {
+        const distance = this.position.distanceTo(playerPosition);
+        
+        // AI State Machine
+        if (distance <= this.attackRange) {
+            this.state = 'attack';
+        } else {
+            this.state = 'chase';
+        }
+        
+        switch (this.state) {
+            case 'chase':
+                this.chase(playerPosition, delta);
+                break;
+            case 'attack':
+                this.attack(player, delta);
+                break;
+        }
+        
+        // Apply velocity
+        this.position.add(this.velocity.clone().multiplyScalar(delta));
+        if (this.mesh) {
+            this.mesh.position.copy(this.position);
+            // Face player
+            this.mesh.lookAt(playerPosition);
+        }
+        
+        // Friction
+        this.velocity.multiplyScalar(0.9);
+    }
+    
+    chase(targetPos, delta) {
+        const direction = new THREE.Vector3()
+            .subVectors(targetPos, this.position)
+            .normalize();
+        
+        // Add some randomness to movement
+        direction.x += (Math.random() - 0.5) * 0.3;
+        direction.z += (Math.random() - 0.5) * 0.3;
+        direction.normalize();
+        
+        this.velocity.add(direction.multiplyScalar(this.speed * delta * 2));
+    }
+    
+    attack(player, delta) {
+        const now = performance.now() / 1000;
+        if (now - this.lastAttackTime >= this.attackCooldown) {
+            player.takeDamage(this.damage);
+            this.lastAttackTime = now;
+            
+            // Visual attack effect
+            this.createAttackEffect();
+        }
+    }
+    
+    createAttackEffect() {
+        // Could add particle effects here
+    }
+    
+    takeDamage(amount) {
+        this.health -= amount;
+        
+        // Flash effect
+        if (this.mesh) {
+            this.mesh.material.color.setHex(0xffffff);
+            setTimeout(() => {
+                if (this.mesh) {
+                    const colors = {
+                        drone: 0x00ffff,
+                        stalker: 0xff00ff,
+                        tank: 0xff4400,
+                        phantom: 0x8800ff
+                    };
+                    this.mesh.material.color.setHex(colors[this.type] || 0x00ffff);
+                }
+            }, 100);
+        }
+        
+        return this.health <= 0;
+    }
+}
+
+// ============================================
+// LEVEL GENERATION
+// ============================================
+class Level {
+    constructor(scene) {
+        this.scene = scene;
+        this.walls = [];
+        this.floor = null;
+        this.ceiling = null;
+        this.size = 50; // Room size
+        this.wallHeight = 4;
+    }
+    
+    generate() {
+        this.createFloor();
+        this.createWalls();
+        this.createCeiling();
+        this.addDecorations();
+    }
+    
+    createFloor() {
+        const geometry = new THREE.PlaneGeometry(this.size, this.size);
+        const material = new THREE.MeshBasicMaterial({
+            color: 0x111122,
+            side: THREE.DoubleSide
+        });
+        
+        // Grid texture effect using wireframe overlay
+        const gridHelper = new THREE.GridHelper(this.size, 20, 0x00ffff, 0x003344);
+        
+        this.floor = new THREE.Mesh(geometry, material);
+        this.floor.rotation.x = -Math.PI / 2;
+        this.scene.add(this.floor);
+        this.scene.add(gridHelper);
+    }
+    
+    createWalls() {
+        const wallThickness = 1;
+        const halfSize = this.size / 2;
+        
+        // Create 4 walls
+        const wallPositions = [
+            { x: 0, z: -halfSize, w: this.size, d: wallThickness }, // North
+            { x: 0, z: halfSize, w: this.size, d: wallThickness },  // South
+            { x: -halfSize, z: 0, w: wallThickness, d: this.size }, // West
+            { x: halfSize, z: 0, w: wallThickness, d: this.size }   // East
+        ];
+        
+        wallPositions.forEach(pos => {
+            const geometry = new THREE.BoxGeometry(pos.w, this.wallHeight, pos.d);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x222244,
+                wireframe: true
+            });
+            
+            const wall = new THREE.Mesh(geometry, material);
+            wall.position.set(pos.x, this.wallHeight / 2, pos.z);
+            
+            this.scene.add(wall);
+            this.walls.push(wall);
+        });
+    }
+    
+    createCeiling() {
+        const geometry = new THREE.PlaneGeometry(this.size, this.size);
+        const material = new THREE.MeshBasicMaterial({
+            color: 0x0a0a15,
+            side: THREE.DoubleSide
+        });
+        
+        this.ceiling = new THREE.Mesh(geometry, material);
+        this.ceiling.rotation.x = Math.PI / 2;
+        this.ceiling.position.y = this.wallHeight;
+        this.scene.add(this.ceiling);
+    }
+    
+    addDecorations() {
+        // Add some pillars
+        const pillarPositions = [
+            { x: -10, z: -10 },
+            { x: 10, z: -10 },
+            { x: -10, z: 10 },
+            { x: 10, z: 10 }
+        ];
+        
+        pillarPositions.forEach(pos => {
+            const geometry = new THREE.BoxGeometry(2, this.wallHeight, 2);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x334455,
+                wireframe: true
+            });
+            
+            const pillar = new THREE.Mesh(geometry, material);
+            pillar.position.set(pos.x, this.wallHeight / 2, pos.z);
+            this.scene.add(pillar);
+        });
+    }
+}
+
+// ============================================
+// PLAYER CONTROLLER
+// ============================================
+class Player {
+    constructor(camera, input) {
+        this.camera = camera;
+        this.input = input;
+        
+        // Health
+        this.health = 100;
+        this.maxHealth = 100;
+        
+        // Movement
+        this.position = new THREE.Vector3(0, 1.6, 0);
+        this.velocity = new THREE.Vector3();
+        this.speed = 8;
+        this.sprintSpeed = 14;
+        this.jumpForce = 8;
+        this.isGrounded = true;
+        
+        // Look
+        this.yaw = 0;
+        this.pitch = 0;
+        this.sensitivity = 0.002;
+        
+        // Weapons
+        this.weapons = [
+            new Weapon('AEGIS-7 RIFLE', 25, 10, 1.5, 30, 120, true),
+            new Weapon('PHANTOM SHOTGUN', 15, 2, 2, 8, 32, false),
+            new Weapon('VOID SNIPER', 100, 1, 3, 5, 25, false)
+        ];
+        this.currentWeaponIndex = 0;
+        
+        // Score
+        this.score = 0;
+        this.kills = 0;
+        
+        this.setupCamera();
+    }
+    
+    setupCamera() {
+        this.camera.position.copy(this.position);
+    }
+    
+    update(delta) {
+        // Update weapon
+        this.getCurrentWeapon().update();
+        
+        // Handle input
+        this.handleMovement(delta);
+        this.handleLook();
+        this.handleWeaponSwitch();
+        this.handleReload();
+        this.handleFire();
+    }
+    
+    handleMovement(delta) {
+        const moveSpeed = this.input.isPressed('ShiftLeft') ? this.sprintSpeed : this.speed;
+        
+        const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+        const right = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+        
+        const moveDir = new THREE.Vector3();
+        
+        if (this.input.isPressed('KeyW')) moveDir.add(forward);
+        if (this.input.isPressed('KeyS')) moveDir.sub(forward);
+        if (this.input.isPressed('KeyA')) moveDir.sub(right);
+        if (this.input.isPressed('KeyD')) moveDir.add(right);
+        
+        if (moveDir.length() > 0) {
+            moveDir.normalize().multiplyScalar(moveSpeed * delta);
+            this.position.add(moveDir);
+        }
+        
+        // Simple boundary clamping
+        const bound = 23;
+        this.position.x = MathUtils.clamp(this.position.x, -bound, bound);
+        this.position.z = MathUtils.clamp(this.position.z, -bound, bound);
+        
+        // Update camera position
+        this.camera.position.copy(this.position);
+    }
+    
+    handleLook() {
+        const delta = this.input.getMouseDelta();
+        this.yaw -= delta.x * this.sensitivity;
+        this.pitch -= delta.y * this.sensitivity;
+        this.pitch = MathUtils.clamp(this.pitch, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
+        
+        this.camera.rotation.order = 'YXZ';
+        this.camera.rotation.y = this.yaw;
+        this.camera.rotation.x = this.pitch;
+    }
+    
+    handleWeaponSwitch() {
+        if (this.input.isPressed('Digit1')) this.currentWeaponIndex = 0;
+        if (this.input.isPressed('Digit2')) this.currentWeaponIndex = 1;
+        if (this.input.isPressed('Digit3')) this.currentWeaponIndex = 2;
+    }
+    
+    handleReload() {
+        if (this.input.isPressed('KeyR')) {
+            this.getCurrentWeapon().startReload();
+        }
+    }
+    
+    handleFire() {
+        const weapon = this.getCurrentWeapon();
+        
+        if (weapon.automatic) {
+            if (this.input.mouseDown.left && weapon.fire()) {
+                this.fireWeapon();
+            }
+        } else {
+            // Semi-auto - need to release and press again
+            if (this.input.mouseDown.left && !this.wasMouseDown && weapon.fire()) {
+                this.fireWeapon();
+            }
+        }
+        
+        this.wasMouseDown = this.input.mouseDown.left;
+    }
+    
+    fireWeapon() {
+        // Raycast from camera center
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
+        
+        // This will be handled by the game class to check enemy hits
+        if (gameInstance) {
+            gameInstance.checkWeaponHit(raycaster, this.getCurrentWeapon().damage);
+        }
+        
+        // Recoil effect
+        this.pitch += 0.02;
+    }
+    
+    getCurrentWeapon() {
+        return this.weapons[this.currentWeaponIndex];
+    }
+    
+    takeDamage(amount) {
+        this.health -= amount;
+        
+        // Screen damage effect
+        const overlay = document.getElementById('damage-overlay');
+        overlay.classList.add('active');
+        setTimeout(() => overlay.classList.remove('active'), 200);
+        
+        if (this.health <= 0) {
+            this.health = 0;
+            if (gameInstance) {
+                gameInstance.gameOver();
+            }
+        }
+    }
+    
+    addScore(points) {
+        this.score += points;
+        this.kills++;
+    }
+}
+
+// ============================================
+// PARTICLE SYSTEM
+// ============================================
+class ParticleSystem {
+    constructor(scene) {
+        this.scene = scene;
+        this.particles = [];
+    }
+    
+    createExplosion(position, color = 0x00ffff, count = 20) {
+        for (let i = 0; i < count; i++) {
+            const geometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const material = new THREE.MeshBasicMaterial({ color: color });
+            const particle = new THREE.Mesh(geometry, material);
+            
+            particle.position.copy(position);
+            
+            const velocity = new THREE.Vector3(
+                (Math.random() - 0.5) * 10,
+                (Math.random() - 0.5) * 10,
+                (Math.random() - 0.5) * 10
+            );
+            
+            this.scene.add(particle);
+            
+            this.particles.push({
+                mesh: particle,
+                velocity: velocity,
+                life: 1.0,
+                decay: 0.02 + Math.random() * 0.03
+            });
+        }
+    }
+    
+    update(delta) {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            
+            p.life -= p.decay;
+            p.mesh.position.add(p.velocity.clone().multiplyScalar(delta));
+            p.velocity.multiplyScalar(0.95);
+            p.mesh.rotation.x += delta * 2;
+            p.mesh.rotation.y += delta * 2;
+            
+            if (p.life <= 0) {
+                this.scene.remove(p.mesh);
+                this.particles.splice(i, 1);
+            } else {
+                p.mesh.scale.setScalar(p.life);
+            }
+        }
+    }
+}
+
+// ============================================
+// MAIN GAME CLASS
+// ============================================
+class AetheriumGame {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.input = null;
+        this.player = null;
+        this.level = null;
+        this.particles = null;
+        
+        this.enemies = [];
+        this.wave = 1;
+        this.enemiesPerWave = 5;
+        this.waveInProgress = false;
+        this.timeBetweenWaves = 5;
+        this.waveTimer = 0;
+        
+        this.lastTime = 0;
+        this.animationId = null;
+        
+        this.init();
+    }
+    
+    init() {
+        // Scene
+        this.scene = new THREE.Scene();
+        this.scene.fog = new THREE.Fog(0x000000, 10, 50);
+        
+        // Camera
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        
+        // Renderer
+        this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        
+        // Input
+        this.input = new InputManager();
+        
+        // Level
+        this.level = new Level(this.scene);
+        this.level.generate();
+        
+        // Player
+        this.player = new Player(this.camera, this.input);
+        
+        // Particles
+        this.particles = new ParticleSystem(this.scene);
+        
+        // Resize handler
+        window.addEventListener('resize', () => this.onResize());
+        
+        // Start game loop
+        this.lastTime = performance.now();
+        this.animate();
+    }
+    
+    startWave() {
+        this.waveInProgress = true;
+        this.showNotification(`WAVE ${this.wave}`, 'wave');
+        
+        const enemyCount = this.enemiesPerWave + (this.wave * 2);
+        
+        for (let i = 0; i < enemyCount; i++) {
+            setTimeout(() => {
+                if (currentState !== GameState.PLAYING) return;
+                
+                // Spawn at random position away from player
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 15 + Math.random() * 10;
+                const spawnPos = new THREE.Vector3(
+                    Math.cos(angle) * distance,
+                    0.75,
+                    Math.sin(angle) * distance
+                );
+                
+                // Enemy type based on wave
+                let type = 'drone';
+                const rand = Math.random();
+                if (this.wave > 2 && rand < 0.3) type = 'stalker';
+                if (this.wave > 4 && rand < 0.2) type = 'tank';
+                if (this.wave > 6 && rand < 0.15) type = 'phantom';
+                
+                const enemy = new Hollow(spawnPos, type);
+                this.enemies.push(enemy);
+                this.scene.add(enemy.mesh);
+            }, i * 1000);
+        }
+    }
+    
+    update(delta) {
+        if (currentState !== GameState.PLAYING) return;
+        
+        // Update player
+        this.player.update(delta);
+        
+        // Update particles
+        this.particles.update(delta);
+        
+        // Update enemies
+        const playerPos = this.player.position;
+        
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+            const enemy = this.enemies[i];
+            enemy.update(delta, playerPos, this.player);
+            
+            // Check death
+            if (enemy.health <= 0) {
+                this.particles.createExplosion(enemy.position, 0x00ffff, 15);
+                this.scene.remove(enemy.mesh);
+                this.player.addScore(enemy.scoreValue);
+                this.enemies.splice(i, 1);
+                
+                this.showNotification(`+${enemy.scoreValue}`, 'kill');
+            }
+        }
+        
+        // Wave management
+        if (this.enemies.length === 0 && this.waveInProgress) {
+            this.waveInProgress = false;
+            this.waveTimer = 0;
+            this.wave++;
+        }
+        
+        if (!this.waveInProgress) {
+            this.waveTimer += delta;
+            if (this.waveTimer >= this.timeBetweenWaves) {
+                this.startWave();
+            }
+        }
+        
+        // Update HUD
+        this.updateHUD();
+    }
+    
+    checkWeaponHit(raycaster, damage) {
+        // Check all enemies
+        for (const enemy of this.enemies) {
+            const intersects = raycaster.intersectObject(enemy.mesh);
+            if (intersects.length > 0) {
+                const killed = enemy.takeDamage(damage);
+                
+                // Hit effect
+                this.particles.createExplosion(intersects[0].point, 0xff0000, 5);
+                
+                if (killed) {
+                    // Already handled in update loop
+                }
+                
+                break; // Only hit first enemy
+            }
+        }
+    }
+    
+    updateHUD() {
+        // Health
+        const healthPercent = (this.player.health / this.player.maxHealth) * 100;
+        document.getElementById('healthFill').style.width = healthPercent + '%';
+        document.getElementById('healthText').textContent = Math.floor(this.player.health);
+        
+        // Ammo
+        const weapon = this.player.getCurrentWeapon();
+        document.getElementById('currentAmmo').textContent = weapon.currentAmmo;
+        document.getElementById('reserveAmmo').textContent = weapon.reserveAmmo;
+        document.getElementById('weaponName').textContent = weapon.name;
+        
+        // Score
+        document.getElementById('scoreValue').textContent = this.player.score;
+        document.getElementById('waveNumber').textContent = this.wave;
+    }
+    
+    showNotification(text, type) {
+        const notif = document.getElementById('notification');
+        notif.textContent = text;
+        notif.className = 'notification show ' + type;
+        
+        setTimeout(() => {
+            notif.classList.remove('show');
+        }, 1500);
+    }
+    
+    gameOver() {
+        currentState = GameState.GAMEOVER;
+        this.input.unlockPointer();
+        
+        document.getElementById('hud').style.display = 'none';
+        document.getElementById('gameOverScreen').classList.remove('hidden');
+        document.getElementById('finalScore').textContent = this.player.score;
+        document.getElementById('finalWave').textContent = this.wave;
+    }
+    
+    animate() {
+        this.animationId = requestAnimationFrame(() => this.animate());
+        
+        const now = performance.now();
+        const delta = Math.min((now - this.lastTime) / 1000, 0.1);
+        this.lastTime = now;
+        
+        this.update(delta);
+        this.renderer.render(this.scene, this.camera);
+    }
+    
+    onResize() {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    
+    destroy() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+        }
+    }
+}
+
+// ============================================
+// MENU FUNCTIONS
+// ============================================
+function startGame() {
+    document.getElementById('mainMenu').classList.add('hidden');
+    document.getElementById('hud').style.display = 'block';
+    
+    currentState = GameState.PLAYING;
+    
+    if (gameInstance) {
+        gameInstance.destroy();
+    }
+    
+    gameInstance = new AetheriumGame();
+    gameInstance.input.lockPointer();
+    gameInstance.startWave();
+}
+
+function togglePause() {
+    if (currentState === GameState.PLAYING) {
+        currentState = GameState.PAUSED;
+        gameInstance.input.unlockPointer();
+        document.getElementById('pauseMenu').classList.remove('hidden');
+    }
+}
+
+function resumeGame() {
+    currentState = GameState.PLAYING;
+    gameInstance.input.lockPointer();
+    document.getElementById('pauseMenu').classList.add('hidden');
+}
+
+function restartGame() {
+    document.getElementById('gameOverScreen').classList.add('hidden');
+    document.getElementById('hud').style.display = 'block';
+    
+    currentState = GameState.PLAYING;
+    
+    if (gameInstance) {
+        gameInstance.destroy();
+    }
+    
+    gameInstance = new AetheriumGame();
+    gameInstance.input.lockPointer();
+    gameInstance.startWave();
+}
+
+function returnToMenu() {
+    currentState = GameState.MENU;
+    
+    if (gameInstance) {
+        gameInstance.destroy();
+        gameInstance = null;
+    }
+    
+    document.getElementById('mainMenu').classList.remove('hidden');
+    document.getElementById('pauseMenu').classList.add('hidden');
+    document.getElementById('gameOverScreen').classList.add('hidden');
+    document.getElementById('hud').style.display = 'none';
+}
+
+function toggleControls() {
+    const panel = document.getElementById('controlsPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+// Prevent context menu on right click
+document.addEventListener('contextmenu', e => e.preventDefault());
