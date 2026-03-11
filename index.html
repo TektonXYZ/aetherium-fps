@@ -1502,6 +1502,7 @@ class AetheriumGame {
                 const enemy = new Hollow(spawnPos, type);
                 this.enemies.push(enemy);
                 this.scene.add(enemy.mesh);
+                console.log(`Spawned ${type} at ${spawnPos.x.toFixed(1)}, ${spawnPos.z.toFixed(1)}`);
             }, i * 1000);
         }
     }
