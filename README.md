@@ -106,3 +106,9 @@ Built by TektonXYZ using Three.js and pure JavaScript. Inspired by classic arena
 ---
 
 **Deploy Status:** [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Live-brightgreen)](https://tektonxyz.github.io/aetherium-fps/)
+
+## Recent Updates
+
+- Performance optimizations ongoing
+- Mobile compatibility improvements
+- Daily maintenance: 2026-04-18
